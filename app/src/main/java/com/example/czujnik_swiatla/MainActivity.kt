@@ -14,6 +14,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -26,6 +28,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.text.Editable
 import android.text.TextWatcher
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -55,7 +61,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         db = AppDatabase.getDatabase(this)
 
-        // Przyciski
+        // Sprawdź uprawnienia do zapisu dla Androida < Q
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 101)
+            }
+        }
+
+        // Clear history
         binding.clearButton.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.lightReadingDao().deleteAll()
@@ -65,6 +78,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
+        // Start/Stop toggle
         binding.toggleSensorButton.setOnClickListener {
             isSensorActive = !isSensorActive
             if (isSensorActive) {
@@ -75,6 +89,35 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             } else {
                 sensorManager.unregisterListener(this)
                 binding.toggleSensorButton.text = "Start"
+            }
+        }
+
+        // Save to file (Downloads folder) z formatowaniem daty
+        binding.saveToFileButton.setOnClickListener {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val readings = db.lightReadingDao().getAll()
+
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val fileContent = readings.joinToString("\n") { reading ->
+                    val date = Date(reading.timestamp)
+                    val formattedDate = dateFormat.format(date)
+                    "Date: $formattedDate, Lux: ${reading.lux}"
+                }
+
+                val downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val fileName = "lux_readings_${System.currentTimeMillis()}.txt"
+                val file = File(downloadsPath, fileName)
+
+                try {
+                    file.writeText(fileContent)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Zapisano do Pobranych: $fileName", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Błąd zapisu pliku: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
 
@@ -92,6 +135,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Uprawnienie do zapisu nadane", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Brak uprawnień do zapisu plików", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     override fun onResume() {
