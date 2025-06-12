@@ -47,6 +47,7 @@
                 android:textColor="@color/primary_text"
                 app:layout_constraintStart_toEndOf="@id/luxIcon"
                 app:layout_constraintTop_toTopOf="parent" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -95,24 +96,51 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Clear History Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/clearButton"
-        android:layout_width="wrap_content"
+    <!-- Start/Stop + Clear Buttons -->
+    <LinearLayout
+        android:id="@+id/buttonRow"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:padding="12dp"
-        android:text="Clear History"
-        android:textSize="16sp"
-        android:fontFamily="@font/poppins"
-        android:textStyle="bold"
-        android:textColor="@android:color/white"
-        app:cornerRadius="12dp"
-        app:backgroundTint="@color/primary"
-        app:rippleColor="@color/primary_text"
-        android:elevation="8dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@id/luxCard"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggleSensorButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="12dp"
+            android:text="Stop"
+            android:textSize="16sp"
+            android:fontFamily="@font/poppins"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            app:cornerRadius="12dp"
+            app:backgroundTint="@color/primary"
+            app:rippleColor="@color/primary_text"
+            android:elevation="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clearButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:padding="12dp"
+            android:text="Clear History"
+            android:textSize="16sp"
+            android:fontFamily="@font/poppins"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            app:cornerRadius="12dp"
+            app:backgroundTint="@color/primary"
+            app:rippleColor="@color/primary_text"
+            android:elevation="8dp" />
+    </LinearLayout>
 
     <!-- RecyclerView w CardView -->
     <com.google.android.material.card.MaterialCardView
@@ -121,7 +149,7 @@
         android:layout_margin="16dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp"
-        app:layout_constraintTop_toBottomOf="@id/clearButton"
+        app:layout_constraintTop_toBottomOf="@id/buttonRow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">

@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val NOTIFICATION_ID = 1
     private var minThreshold: Float = 0f
     private var maxThreshold: Float = 1000f
+    private var isSensorActive = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +55,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         db = AppDatabase.getDatabase(this)
 
+        // Przyciski
         binding.clearButton.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
                 db.lightReadingDao().deleteAll()
@@ -63,24 +65,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
+        binding.toggleSensorButton.setOnClickListener {
+            isSensorActive = !isSensorActive
+            if (isSensorActive) {
+                lightSensor?.also { sensor ->
+                    sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+                }
+                binding.toggleSensorButton.text = "Stop"
+            } else {
+                sensorManager.unregisterListener(this)
+                binding.toggleSensorButton.text = "Start"
+            }
+        }
+
         createNotificationChannel()
         loadThresholds()
 
-        // Automatyczna aktualizacja przy zmianie tekstu
         binding.minThresholdEditText.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                updateThresholds()
-            }
-
+            override fun afterTextChanged(s: Editable?) = updateThresholds()
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
         binding.maxThresholdEditText.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                updateThresholds()
-            }
-
+            override fun afterTextChanged(s: Editable?) = updateThresholds()
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
@@ -88,8 +96,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
-        lightSensor?.also { sensor ->
-            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        if (isSensorActive) {
+            lightSensor?.also { sensor ->
+                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            }
         }
         loadReadings()
     }
@@ -100,18 +110,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
+        if (!isSensorActive) return
+
         if (event.sensor.type == Sensor.TYPE_LIGHT) {
             val lux = event.values[0]
             binding.luxValue.text = "Lux: $lux"
 
-            // Powiadomienia o przekroczeniu progu
             if (lux < minThreshold) {
                 showThresholdNotification("Light level too low: $lux lux")
             } else if (lux > maxThreshold) {
                 showThresholdNotification("Light level too high: $lux lux")
             }
 
-            // Zapis do bazy i odświeżenie listy
             lifecycleScope.launch(Dispatchers.IO) {
                 db.lightReadingDao().insert(
                     LightReading(
@@ -150,7 +160,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Uprawnienia na Androidzie 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     this,
@@ -168,7 +177,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun showThresholdNotification(message: String) {
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_light_bulb) // Upewnij się, że ten plik istnieje w res/drawable
+            .setSmallIcon(R.drawable.ic_light_bulb)
             .setContentTitle("Lux Threshold Alert")
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
