@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.7.1")
     kapt("androidx.room:room-compiler:2.7.1")
     implementation("androidx.room:room-ktx:2.7.1")
-
+    implementation("androidx.core:core:x.x.x")
+    implementation("com.google.android.material:material:x.x.x")
     implementation("androidx.recyclerview:recyclerview:1.4.0")
 }
